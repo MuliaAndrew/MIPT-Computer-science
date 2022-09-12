@@ -62,16 +62,24 @@ int catWithoutArgs()
     
     while( 1 )
     {
-        if( !read( 0, buffer, BUFFER_SIZE - 1 ) ) 
+        int readed = fread( buffer, sizeof( char ), BUFFER_SIZE - 1, stdin );
+        
+        if( readed == 0 ) 
+        {
             return 0;
+        }
         
         if( errno != temp_errno )
         {
-            perror( "in read() in catWithoutArgs()." );
+            perror( "in fread() in catWithoutArgs()." );
             return 1;
         }
 
-        write( 1, buffer, BUFFER_SIZE - 1 );
+        if( fwrite( buffer, sizeof( char ), readed, stdout ) <= 0 )
+        {
+            perror( "in fwrite() in catWithoutArgs()" ); 
+            return 1;
+        }
     }
     return 0;
 }

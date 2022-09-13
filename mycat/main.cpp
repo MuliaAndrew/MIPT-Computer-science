@@ -10,13 +10,13 @@ const int ERROR_MSG_MAXLEN = 200;
 
 int checkFiles( char** fnames );
 
+int catWithArgs( int n_files, char** fnames );
+
 int catWithoutArgs();
 
 
 int main( int argc, char** argv )
 {
-    // int errs = 0;
-
     if( argc == 1 )
     {
         return catWithoutArgs();
@@ -39,7 +39,7 @@ int main( int argc, char** argv )
         errno = temp_errno;
     }
 
-    // catWithArgs( argv );
+    catWithArgs( argc, argv );
 }
 
 
@@ -64,10 +64,8 @@ int catWithoutArgs()
     {
         int readed = fread( buffer, sizeof( char ), BUFFER_SIZE - 1, stdin );
         
-        if( readed == 0 ) 
-        {
+        if( !readed )
             return 0;
-        }
         
         if( errno != temp_errno )
         {
@@ -81,5 +79,46 @@ int catWithoutArgs()
             return 1;
         }
     }
+    return 0;
+}
+
+
+int catWithArgs( int n_files, char** fnames )
+{
+    char buffer[ BUFFER_SIZE ] = { 0 };
+
+    int temp_errno = errno;
+
+    for( int i = 1; i < n_files; i++ )
+    {
+        FILE* cur_file = fopen( fnames[ i ], "r" );
+        
+        if ( !cur_file || errno != temp_errno )
+        {
+            perror( "in fopen() in catWithArgs()" );
+            return 1;
+        }
+
+        while( 1 )
+        {
+            int readed = fread( buffer, sizeof( char ), BUFFER_SIZE - 1, cur_file );
+
+            if( !readed )
+                return 0;
+            
+            if( errno != temp_errno )
+            {
+                perror( "in read() in catWithArgs()" );
+                return 1;
+            }
+
+            if( fwrite( buffer, sizeof( char ), readed, stdout ) <= 0 )
+            {
+                perror( "in fwrite() in catWithArgs()" );
+                return 1;
+            }
+        } 
+    }
+
     return 0;
 }

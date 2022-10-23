@@ -104,7 +104,7 @@ int IdWithArgs( int argc, char** argv )
     gid_t* groups = nullptr;
     gid_t group = 0;
 
-    getgrouplist( argv[ 1 ], group, groups, ngroups );
+    getgrouplist( argv[ 1 ], group, groups, &ngroups );
 
     groups = ( gid_t* )calloc( ngroups, sizeof( gid_t ) );
 
@@ -113,7 +113,7 @@ int IdWithArgs( int argc, char** argv )
 
     errno = 0;
     
-    getgrouplist( argv[ 1 ], group, groups, ngroups );
+    getgrouplist( argv[ 1 ], group, groups, &ngroups );
     IF_ERRNO( , "in getgrouplist()" );
 
     struct group* gr = getgrgid( group );
@@ -125,7 +125,7 @@ int IdWithArgs( int argc, char** argv )
     {
         gr = getgrgid( groups[ i ] );
         IF_ERRNO( , "in loop in getgrgid()" );
-        if( i + 1 = ngroups )
+        if( i + 1 == ngroups )
             printf( "%d(%s)", gr->gr_gid, gr->gr_name);
         else
             printf( "%d(%s),", gr->gr_gid, gr->gr_name);

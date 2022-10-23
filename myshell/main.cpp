@@ -9,8 +9,8 @@
 #include <errno.h>
 
 
-#define READ_PIPE 0    // in cur_pipe refers to read fd
-#define WRITE_PIPE 1   // --||-- to write fd
+#define READ_PIPE 0    // index of read fd in cur_pipe
+#define WRITE_PIPE 1   // of write fd --||--
 
 
 const char  EXIT_CMD[]      = "exit";
@@ -41,6 +41,14 @@ int main()
         while (errno != ECHILD)
             wait(&status);
         
+        if (errno && errno != ECHILD)
+        {
+            perror("in wait()");
+            _exit(-1);
+        }
+        else
+            errno = 0;
+        
         write(STDOUT_FILENO, (char*)PROMT, 5);
 
         char cmd[CMD_MAX_LEN] = {};
@@ -68,10 +76,80 @@ int main()
 
         int source_offset = 0;
         int dest_offset = 0;
-        int in_fd_prev = -1; // Input fd of pipe where previous command will write output
-        int in_fd_next = -1; // Saved input fd of pipe for next command where it will write output
+        int read_fd_prev = -1; // Input fd of pipe where previous command will write output
         int cur_pipe[2];
 
+        while(dest_offset < n_words)
+        {
+            for(int i = source_offset; word[i] != nullptr; i++)
+                dest_offset++;
+            
+            dest_offset++;
+
+            if (dest_offset < n_words)
+            {
+                if (pipe(cur_pipe) == -1)
+                {
+                    perror("in pipe()");
+                    _exit(-1);
+                }
+            }
+
+            if (!source_offset && dest_offset < n_words)
+                close(cur_pipe[READ_PIPE]);
+
+            pid_t pid = fork();
+
+            if (pid)
+            {
+                if (read_fd_prev != -1)
+                    close(read_fd_prev);
+                
+                read_fd_prev = cur_pipe[READ_PIPE];
+
+                if (cur_pipe[WRITE_PIPE] != 0)
+                    close(cur_pipe[WRITE_PIPE]);
+            }
+            else
+            {
+                if (!source_offset && dest_offset > n_words)
+                {
+                    // write(STDOUT_FILENO, "1CASE\t", 7);
+
+                    execvp(word[source_offset], word + source_offset);
+                }
+                else if (dest_offset > n_words && source_offset)
+                {
+                    // write(STDOUT_FILENO, "2CASE\t", 7);
+
+                    close(STDIN_FILENO);
+                    dup(cur_pipe[WRITE_PIPE]);
+                    execvp(word[source_offset], word + source_offset);
+                }
+                else if (!source_offset && dest_offset < n_words)
+                {
+                    // write(STDOUT_FILENO, "3CASE\t", 7);
+
+                    close(STDOUT_FILENO);
+                    dup(cur_pipe[WRITE_PIPE]);
+                    execvp(word[source_offset], word + source_offset);
+                }
+                else
+                {
+                    // write(STDOUT_FILENO, "4CASE\t", 7);
+
+                    close(STDIN_FILENO);
+                    dup(read_fd_prev);
+
+                    close(STDOUT_FILENO);
+                    dup(cur_pipe[WRITE_PIPE]);
+
+                    close(cur_pipe[READ_PIPE]);
+
+                    execvp(word[source_offset], word + source_offset);
+                }
+            }
+        }
     }
 }
 

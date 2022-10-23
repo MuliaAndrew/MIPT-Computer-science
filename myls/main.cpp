@@ -16,7 +16,7 @@
 enum Flag
 {
     all     = 0x01,
-    dir     = 0x02,
+    Dir     = 0x02,
     inode   = 0x04,
     lon     = 0x08,
     Recurs  = 0x10,
@@ -67,7 +67,7 @@ int getFlags(int argc, char** argv)
                 flags = flags | lon;
                 break;
             case 'd':
-                flags = flags | dir;
+                flags = flags | Dir;
                 break;
             case 'a':
                 flags = flags | all;
@@ -114,6 +114,15 @@ void ls(int flags, char* name)
 
     while((cur_e = readdir(dir)))
     {
+        if (flags & Dir)
+        {
+            if (strcmp(cur_e->d_name, "."))
+                continue;
+
+            show(cur_e, flags, cur_e->d_name);
+            return;
+        }
+
         if (!(flags & all) & cur_e->d_name[0] == '.')
             continue;
 
@@ -162,7 +171,7 @@ void show(dirent* cur_e, int flags, char* name)
     {   
         struct stat st_buf = {};
 
-        if (stat(name, &st_buf))
+        if (lstat(name, &st_buf))
         {
             perror("in stat()");
             _exit(errno);
@@ -171,7 +180,6 @@ void show(dirent* cur_e, int flags, char* name)
         if (flags & inode)
             printf("%ld ", st_buf.st_ino);
         
-        char mode[10] = "rwxrwxrwx";
         char type;
         
         switch(st_buf.st_mode & S_IFMT)
@@ -189,6 +197,7 @@ void show(dirent* cur_e, int flags, char* name)
                 type = 'u'; // "udefined"
         }
 
+        char mode[10] = "rwxrwxrwx";
         int mask = 0x01 << 8;
 
         for (int i = 0; i < 9; i++)
@@ -212,8 +221,18 @@ void show(dirent* cur_e, int flags, char* name)
         int date_len = strlen(date);
         date[date_len - 1] = '\0';
 
-        printf("%c%s %ld %s %s %ld %s %s\n", type, mode, st_buf.st_nlink, username, grname, st_buf.st_size, date, cur_e->d_name);
+        if (flags & numeric)
+            printf("%c%s %ld %d %d %ld %s %s\n", type, mode, st_buf.st_nlink, own_uid, own_gid, st_buf.st_size, date, cur_e->d_name);
+        
+        else
+            printf("%c%s %ld %s %s %ld %s %s\n", type, mode, st_buf.st_nlink, username, grname, st_buf.st_size, date, cur_e->d_name);
     }
     else
-        printf("%s\t", cur_e->d_name);
+    {
+        if (flags & inode)
+            printf("%ld\t%s\n", cur_e->d_ino, cur_e->d_name);
+        
+        else
+            printf("%s\t", cur_e->d_name);
+    }
 }

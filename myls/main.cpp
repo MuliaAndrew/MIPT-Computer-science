@@ -97,7 +97,7 @@ void ls(int flags, char* name)
 {
     DIR* dir = opendir(name);
 
-    dirent dirs[4096] = {}; // the queue of sirs to recursive mode
+    dirent dirs[4096] = {}; // the queue of dirs to recursive mode
     int q_end = 0;
 
     if (errno)

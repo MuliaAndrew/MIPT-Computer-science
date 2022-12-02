@@ -1,8 +1,11 @@
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "unistd.h"
-#include "errno.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 const int BUFFER_SIZE = 1024;
 const int ERROR_MSG_MAXLEN = 200;
@@ -26,7 +29,6 @@ int main( int argc, char** argv )
     
     if( err )
     {
-        int temp_errno = errno;
         errno = ENOENT;
 
         char msg[ ERROR_MSG_MAXLEN ] = { 0 };
@@ -35,8 +37,6 @@ int main( int argc, char** argv )
         strcat( msg, "\' does not exist in this directory or unreadable.\0" );
 
         perror( msg );
-
-        errno = temp_errno;
     }
 
     catWithArgs( argc, argv );
@@ -58,22 +58,20 @@ int catWithoutArgs()
 {
     char buffer[ BUFFER_SIZE ] = { 0 };
 
-    int temp_errno = errno;
-    
     while( 1 )
     {
-        int readed = fread( buffer, sizeof( char ), BUFFER_SIZE - 1, stdin );
+        int readed = read( STDIN_FILENO, buffer, BUFFER_SIZE );
         
         if( !readed )
             return 0;
         
-        if( errno != temp_errno )
+        if( errno  )
         {
             perror( "in fread() in catWithoutArgs()." );
             return 1;
         }
 
-        if( fwrite( buffer, sizeof( char ), readed, stdout ) <= 0 )
+        if( write(STDOUT_FILENO, buffer, BUFFER_SIZE) == -1 )
         {
             perror( "in fwrite() in catWithoutArgs()" ); 
             return 1;
@@ -91,7 +89,7 @@ int catWithArgs( int n_files, char** fnames )
 
     for( int i = 1; i < n_files; i++ )
     {
-        FILE* cur_file = fopen( fnames[ i ], "r" );
+        int cur_file = open( fnames[i], O_RDONLY );
         
         if ( !cur_file || errno != temp_errno )
         {
@@ -101,7 +99,7 @@ int catWithArgs( int n_files, char** fnames )
 
         while( 1 )
         {
-            int readed = fread( buffer, sizeof( char ), BUFFER_SIZE - 1, cur_file );
+            int readed = read( cur_file, buffer, BUFFER_SIZE );
 
             if( !readed )
                 return 0;
@@ -112,12 +110,14 @@ int catWithArgs( int n_files, char** fnames )
                 return 1;
             }
 
-            if( fwrite( buffer, sizeof( char ), readed, stdout ) <= 0 )
+            if( write(STDOUT_FILENO, buffer, BUFFER_SIZE) == -1 )
             {
                 perror( "in fwrite() in catWithArgs()" );
                 return 1;
             }
-        } 
+        }
+
+        close( cur_file );
     }
 
     return 0;

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
+#include <signal.h>
 
 
 #define READ_PIPE 0    // index of read fd in cur_pipe
@@ -18,6 +19,9 @@ const int   CMD_MAX_LEN     = 1024;
 const int   WORDS_ARR_SIZE  = 512;
 const char  PROMT[]         = " >> ";
 const char  CONVEYER        = '|';
+
+
+int flag = 0;
 
 
 enum Condition
@@ -33,8 +37,13 @@ enum Condition
 */
 int rebuild_cmd(char* cmd, char** word);
 
+void flagHandler(int signo);
+
+
 int main()
 {
+    signal(SIGINT, *flagHandler);
+
     while(1)
     {
         int status;
@@ -53,7 +62,14 @@ int main()
 
         char cmd[CMD_MAX_LEN] = {};
 
+        if (flag)
+            return 0;
+        
         int readBytes = read(STDIN_FILENO, (char*)cmd, CMD_MAX_LEN);
+
+        if (flag)
+            return 0;
+
         if (readBytes == CMD_MAX_LEN)
         {
             fprintf(stderr, "Command length must be lower the 1024 symbols");
@@ -192,4 +208,13 @@ int rebuild_cmd(char* cmd, char** word)
     if (cmd[0] == '\0')
         word_i -= 1;
     return word_i + 1;
+}
+
+
+void flagHandler(int signo)
+{
+    flag = 1;
+    char* msg = "\ngoodbye\n";
+    write(STDOUT_FILENO, msg, 9);
+    _exit(0);
 }

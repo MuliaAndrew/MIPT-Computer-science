@@ -13,9 +13,16 @@
 #include <sys/shm.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/signal.h>
 
 
 const char poison = '0';
+int song_index = -1;
+int wait_flg = 1;
+
+void sigHandler(int signal);
+
+bool is_busy(char* busy_letters, char letter); // check if letter is set as proc_letter in another process
 
 
 int main(int argc, char** argv)
@@ -45,7 +52,7 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    int sh_id = shmget(IPC_PRIVATE, song_len + 2 * sizeof(int), IPC_CREAT | 0660);
+    int sh_id = shmget(IPC_PRIVATE, 34 * sizeof(char), IPC_CREAT | 0660);
 
     if (errno)
     {
@@ -53,39 +60,32 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    int* txt_index = (int*)shmat(sh_id, 0 , 0);
-
     if (errno)
     {
         perror("in shmat()");
         return 1;
     }
 
-    int* n_remaining = txt_index + 1;
-
-    char* letter_for_choosing = (char*)(n_remaining + 1);
-
-    *txt_index = 0;
-    *n_remaining = 27;
-
-    strcpy(letter_for_choosing, "abcdefghijklmnopqrstuvwxyz");
-
     pid_t pid;
 
-    printf("text: %s\n", song);
-
-    printf("letters: %s\n", letter_for_choosing);
-
-    for (int i = 0; i < 27; i++)
+    for (int i = 0; i < 33; i++)
     {
         pid = fork();
         if (!pid)
             break;
     }
 
+    signal(SIGUSR1, *sigHandler);
+
+    int* busy_i = (int*)shmat(sh_id, 0, 0);
+    *busy_i = 0;
+
+    char* busy_letters = (char*)(busy_i + 1);
+
+
     if (!pid)
     {
-        pid_t ch_pid = getpid();
+        pid_t ch_pid = getpid();        
 
         if (errno)
         {
@@ -93,60 +93,91 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int* txt_index = (int*)shmat(sh_id, 0, 0);
+        char proc_letter = poison;
 
-        if (errno)
+        while(song_index < song_len)
         {
-            perror("in shmat()");
-            return 1;
-        }
+            int sig;
+            sigset_t set;
+            sigemptyset(&set);
+            sigaddset(&set, SIGUSR1);
 
-        int* n_remaining = txt_index + 1;
-        
-        char* remaining_letters = (char*)(n_remaining + 1);
+            if (wait_flg)
+                sigwait(&set, &sig);
 
-        // printf("remaining letters: %s\n", remaining_letters);
+            wait_flg = 1;
 
-        //Choosing letter for every proc
+            if (proc_letter != poison)
+            {
+                if (song[song_index] == proc_letter)
+                {
+                    printf("[%d]: %c\n", ch_pid, proc_letter);
+                    
+                    kill(0, SIGUSR1);
+                    raise(SIGUSR1);
+                }
+                else
+                    continue;
+            }
 
-        sem_wait(choosing_letter);
+            else
+            {
+                if (is_busy(busy_letters, song[song_index]))
+                    continue;
+                else
+                {
+                    sem_wait(choosing_letter);
 
-        int i = 0;
+                    if (is_busy(busy_letters, song[song_index]))
+                    {
+                        sem_post(choosing_letter);
+                        continue;
+                    }
+                    else
+                    {
+                        proc_letter = song[song_index];
+                        busy_letters[*busy_i++] = proc_letter;
 
-        // looking for available letter in arr
-        for (; i < 27; i++)
-        {
-            if (remaining_letters[i] != poison)
-                break;
-        }
-
-        if (i >= 27)
-        {
-            perror("wtf");
-            exit(EXIT_SUCCESS);
-        }
-        char proc_letter = remaining_letters[i];
-
-        remaining_letters[i] = poison; // make letter unavailable
-        
-        *n_remaining--; // here is used to count how many processes didnt choosed letter
-
-        sem_post(choosing_letter);
-
-        while(*txt_index < song_len)
-        {
-            if (song[*txt_index] == proc_letter)
-            printf("[%u : index = %d]: %c", ch_pid, *txt_index, proc_letter);
-            *txt_index++;
+                        sem_post(choosing_letter);
+                        
+                        printf("[%d]: %c, char %d\n", ch_pid, proc_letter, proc_letter);
+                        
+                        kill(0, SIGUSR1);
+                        raise(SIGUSR1);
+                    }
+                }
+            }
         }
     }
 
     else
     {
+        kill(0, SIGUSR1);
         int wstatus;
-        for (int i = 0; i < 27; i++)
+        for (int i = 0; i < 33; i++)
             wait(&wstatus);
         
         exit(EXIT_SUCCESS);
     }
 }
+
+bool is_busy(char* busy_letters, char letter)
+{
+    int i = 0;
+    for (; busy_letters[i] != 0; i++)
+    {
+        if (letter == busy_letters[i])
+            return 1;
+    }
+    
+    if (i > 25)
+        return 1;
+
+    return 0;
+}
+
+void sigHandler(int signal)
+{
+    song_index++;
+    wait_flg = 0;
+};

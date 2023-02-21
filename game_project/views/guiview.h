@@ -7,4 +7,5 @@ class GUIView : public View
     public:
 
         void draw();
+        winsize getWinSizw();
 };

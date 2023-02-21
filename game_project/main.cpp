@@ -14,6 +14,11 @@ int main(int argc, char** argv)
         view_arg = std::string(argv[1]);
         view = View::get(view_arg);
         view->draw();
+
+        while(1)
+        {
+            pause();
+        }
     }
     else
         return 1;

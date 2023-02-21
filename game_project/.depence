@@ -1,0 +1,4 @@
+main.o: main.cpp
+view.o: view.cpp
+controller.o: controller.cpp
+model.o: model.cpp

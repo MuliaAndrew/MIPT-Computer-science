@@ -2,7 +2,8 @@
 #include "views/view.h"
 #include "views/textview.h"
 #include "views/guiview.h"
-
+#include "models/model.h"
+#include "controllers/controller.h"
 
 int main(int argc, char** argv)
 {
@@ -13,12 +14,13 @@ int main(int argc, char** argv)
     {
         view_arg = std::string(argv[1]);
         view = View::get(view_arg);
-        view->draw();
+        
+        Models::Model model{};
+        View::setModel(model);
 
-        while(1)
-        {
-            pause();
-        }
+        model.setLoopPeriod(1000000);
+
+        view->draw();
     }
     else
         return 1;

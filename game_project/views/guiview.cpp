@@ -6,7 +6,7 @@ void GUIView::draw()
     return;
 }
 
-winsize GUIView::getWinSizw()
+winsize GUIView::getWinSize()
 {
     struct winsize sz{};
     return sz;

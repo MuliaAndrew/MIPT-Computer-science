@@ -11,16 +11,17 @@ class TextView : public View
         static void setWinSZSig();
         void clean();
         void putXY(unsigned int x, unsigned int y);
+        void putSymb(char symb);
         void hline(unsigned int y, unsigned int length);
         void vline(unsigned int x, unsigned int length);
-        void line(unsigned int x, unsigned int y, LineDir dir, unsigned int length);
+        void line(unsigned int x, unsigned int y, LineDir dir, unsigned int length, char symb);
 
     public:
 
         TextView();
 
         void draw();
-        winsize getWinSizw();
+        winsize getWinSize();
 };
 
 void winHndlr(int signum);

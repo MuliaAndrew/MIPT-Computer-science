@@ -16,10 +16,10 @@ textview.o: views/textview.cpp views/textview.h view.o
 guiview.o: views/guiview.cpp views/guiview.h view.o
 	$(CXX) -o guiview.o -c views/guiview.cpp 
 
-controller.o:
+controller.o: controllers/controller.cpp controllers/controller.h
 	$(CXX) -o controller.o -c controllers/controller.cpp 
 
-model.o:
+model.o: models/model.cpp models/model.h
 	$(CXX) -o model.o -c models/model.cpp 
 
 clean:

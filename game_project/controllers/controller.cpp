@@ -1,35 +1,63 @@
 #include "controller.h"
 
-Models::Model *Human::model = nullptr;
+Models::Model* Controller::model = nullptr;
 
-int Human::f_onkey(int ch)
+Controller* Controller::get(const std::string& s)
+{
+    Controller* obj = nullptr;
+    
+    if (s == "AI")
+        auto obj = new AI;
+    
+    else if (s == "Human")
+        auto obj = new Human;
+    
+    return obj;
+}
+
+void Controller::setModel(Models::Model& _m)
+{
+    model = &_m;
+}
+
+int Human::fonKey(char ch)
 {
     switch (ch)
     {
         case 'W':
         case 'w':
-
-            break;
+            snake->move(model->getWinSZ(), model, Models::Dir::up);
+            return 0;
         case 'A':
         case 'a':
-
-            break;
+            snake->move(model->getWinSZ(), model, Models::Dir::left);
+            return 0;
         case 'S':
         case 's':
-
-            break;
+            snake->move(model->getWinSZ(), model, Models::Dir::down);
+            return 0;
         case 'D':
         case 'd':
-
-            break;
-        default:
-            break;
+            snake->move(model->getWinSZ(), model, Models::Dir::right);
+            return 0;
+        case '\e':
+            return 1;
     }
 
+    if (!model->isOnPause)
+    {
+        snake->move(model->getWinSZ(), model, Models::Dir::def);
+        return 0;
+    }
+    return 1;
+}
+
+int AI::fonKey(char ch)
+{
     return ch;
 }
 
-void Human::setModel(Models::Model &m_)
+void Controller::setSnake(Models::Snake* s_)
 {
-    model = &m_;
+    snake = s_;
 }

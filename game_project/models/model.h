@@ -6,10 +6,13 @@
 #include <set>
 #include <termios.h>
 #include <sys/ioctl.h>
-#include <climits>
+#include <string>
+
 
 namespace Models
 {
+    class Model;
+
     enum Dir
     {
         def,
@@ -22,14 +25,14 @@ namespace Models
     // first in pair - x, second - y. x is used to define height, y - width
     using Coord = std::pair<unsigned int, unsigned int>;
 
-    class Rabit
+    class Rabbit
     {
             Coord c;
         
         public:
-            Rabit(unsigned int x = 0, unsigned int y = 0): c(x, y) {}
-            Rabit(Coord c_): c(c_) {}
-            ~Rabit() {}
+            Rabbit(unsigned int x = 0, unsigned int y = 0): c(x, y) {}
+            Rabbit(Coord c_): c(c_) {}
+            ~Rabbit() {}
 
             Coord& coords();
     };
@@ -38,6 +41,8 @@ namespace Models
     {
             std::list<Coord> c {};
             Dir prev_d = right;
+
+            bool isSnakeOnRabbit(Rabbit& rabbit);
         
         public:
             Snake(unsigned int x = 0, unsigned int y = 0) { c.push_front({x, y}); }
@@ -45,7 +50,7 @@ namespace Models
             Snake(): c() {}
             ~Snake() { c.clear(); }
 
-            void move(winsize sz, Dir d = def, bool grow = false);
+            void move(winsize sz, Model* model, Dir d = def);
 
             std::__cxx11::list<Models::Coord>::iterator coords_begin();
             std::__cxx11::list<Models::Coord>::iterator coords_end();
@@ -54,31 +59,37 @@ namespace Models
     class Model
     {
             std::list<Snake> snakes {};
-            std::list<Rabit> rabits {};
+            std::list<Rabbit> rabbits {};
 
             useconds_t loop_period = 1000000;
-
-            bool isSnakeOnRabit(Snake& snake, Rabit& rabit);
+            winsize sz = {};
 
         public:
-            Model(): loop_period(), snakes(), rabits() {}
-            ~Model() { snakes.clear(); rabits.clear(); }
+            bool isOnPause = false;
+
+            Model(): loop_period(), snakes(), rabbits() {}
+            ~Model() { snakes.clear(); rabbits.clear(); }
 
             void update();
+            
+            void setWinSZ(winsize);
+            winsize getWinSZ();
 
             void setLoopPeriod(useconds_t);
             useconds_t getLoopPeriod();
 
             Snake* createSnake(Coord);
-            Rabit* createRabit(Coord);
+            Rabbit* createRabbit(Coord);
             
             void removeSnake(std::list<Models::Snake>::iterator &);
-            void removeRabit(std::list<Models::Rabit>::iterator &);
+            void removeRabbit(std::list<Models::Rabbit>::iterator &);
             
             std::list<Models::Snake>::iterator snakes_begin();
             std::list<Models::Snake>::iterator snakes_end();
 
-            std::list<Models::Rabit>::iterator rabits_begin();
-            std::list<Models::Rabit>::iterator rabits_end();
+            std::list<Models::Rabbit>::iterator rabbits_begin();
+            std::list<Models::Rabbit>::iterator rabbits_end();
+
+            void createRabbitRandom();
     };
 }

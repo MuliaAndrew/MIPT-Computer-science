@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include "views/view.h"
 #include "views/textview.h"
 #include "views/guiview.h"
@@ -7,6 +8,9 @@
 
 int main(int argc, char** argv)
 {
+    const std::string HUMAN = "Human";
+    const std::string AI = "AI";
+
     std::string view_arg;
     View *view;
 
@@ -17,8 +21,18 @@ int main(int argc, char** argv)
         
         Models::Model model{};
         View::setModel(model);
+        model.setWinSZ(view->getWinSize());
+        Controller::setModel(model);
 
-        model.setLoopPeriod(1000000);
+        model.setLoopPeriod(500000);
+
+        auto snake = model.createSnake({3, 3});
+
+        Human human2{Human::wasd};
+        human2.setSnake(snake);
+        auto human2_fonkey = std::bind(&Human::fonKey, &human2, std::placeholders::_1);
+
+        view->setFonKeyHuman(human2_fonkey);
 
         view->draw();
     }

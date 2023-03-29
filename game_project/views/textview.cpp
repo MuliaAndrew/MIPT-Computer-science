@@ -10,47 +10,64 @@ TextView::TextView()
 }
 
 void TextView::draw()
-{
-    auto snake1 = model->createSnake({3, 3});
-    model->createRabit({5, 5});
-    model->createRabit({15, 20});
-    
+{   
+    std::string buffer;
+    int isOnPause = 0;
+
+    for (int i = 0; i < 10; i++)
+        model->createRabbitRandom();
+
+    char ch = 0;
     while(true)
     {
-        clean();
-
         auto sz = getWinSize();
+        model->setWinSZ(sz);
 
-        hline(0, sz.ws_col);
-        hline(sz.ws_row, sz.ws_col);
+        auto readed = read(STDIN_FILENO, const_cast<char*>(buffer.c_str()), 4095);
+        ch = buffer[0];
 
-        vline(0, sz.ws_row);
-        vline(sz.ws_col, sz.ws_row);
+        for (auto f : HumanfonKeys)
+            isOnPause = f(ch);
 
-        snake1->move(sz, Models::down);
-
-        putXY(sz.ws_row / 2, sz.ws_col / 2);
-        printf("x, y: %u, %u", snake1->coords_begin()->first, snake1->coords_begin()->second);
-
-        for (auto snake = model->snakes_begin(); snake != model->snakes_end(); snake++)
+        if (!isOnPause)
         {
-            for (auto coord = snake->coords_begin(); coord != snake->coords_end(); coord++)
+            clean();
+
+            hline(0, sz.ws_col);
+            hline(sz.ws_row, sz.ws_col);
+
+            vline(0, sz.ws_row);
+            vline(sz.ws_col, sz.ws_row);
+
+            for (auto snake = model->snakes_begin(); snake != model->snakes_end(); snake++)
             {
-                putXY(coord->first, coord->second);
-                putSymb('@');
+                for (auto coord = snake->coords_begin(); coord != snake->coords_end(); coord++)
+                {
+                    putXY(coord->first, coord->second);
+                    putSymb('@');
+                }
             }
-        }
 
-        for (auto rabit = model->rabits_begin(); rabit != model->rabits_end(); rabit++)
+            for (auto rabbit = model->rabbits_begin(); rabbit != model->rabbits_end(); rabbit++)
+            {
+                auto coord = rabbit->coords();
+                putXY(coord.first, coord.second);
+                putSymb('$');
+            }
+
+            fflush(stdout);
+        }
+        else
         {
-            auto coord = rabit->coords();
-            putXY(coord.first, coord.second);
-            putSymb('$');
+            if (model->isOnPause)
+                return;
+            else
+                model->isOnPause = true;
         }
-
-        fflush(stdout);
-
+        
         usleep(model->getLoopPeriod());
+        
+        buffer.clear();
     }
 }
 

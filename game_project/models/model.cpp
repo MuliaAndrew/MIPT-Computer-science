@@ -2,11 +2,11 @@
 
 using namespace Models;
 
-Rabit* Model::createRabit(Coord c)
+Rabbit* Model::createRabbit(Coord c)
 {
-    auto r = new Rabit(c);
-    rabits.push_back(*r);
-    return &rabits.back();
+    auto r = new Rabbit(c);
+    rabbits.push_back(*r);
+    return &rabbits.back();
 }
 
 Snake* Model::createSnake(Coord c)
@@ -16,9 +16,9 @@ Snake* Model::createSnake(Coord c)
     return &snakes.back();
 }
 
-void Model::removeRabit(std::list<Models::Rabit>::iterator & r_iter)
+void Model::removeRabbit(std::list<Models::Rabbit>::iterator & r_iter)
 {
-    rabits.erase(r_iter);
+    rabbits.erase(r_iter);
 }
 
 void Model::removeSnake(std::list<Models::Snake>::iterator & s_iter)
@@ -26,16 +26,17 @@ void Model::removeSnake(std::list<Models::Snake>::iterator & s_iter)
     snakes.erase(s_iter);
 }
 
-void Snake::move(winsize sz, Dir d, bool grow)
+void Snake::move(winsize sz, Model* model, Dir d)
 {   
     if (d == def)
         d = prev_d;
     
     if (d == -prev_d)
-        return;
+        d = prev_d;
     
     auto head = c.front();
     auto new_head = head;
+    prev_d = d;
 
     if (d == down)
     {
@@ -58,13 +59,24 @@ void Snake::move(winsize sz, Dir d, bool grow)
     else if (d == right)
     {
         new_head.second = (new_head.second + 1) % sz.ws_col;
-        new_head.second = 2;
+        if (new_head.second < 2)
+            new_head.second = 2;
     }
     
     c.push_front(new_head);
 
-    if (!grow)
-        c.pop_back();
+    for (auto r = model->rabbits_begin(); r != model->rabbits_end(); r++)
+    {
+        if (isSnakeOnRabbit(*r))
+        {
+            model->removeRabbit(r);
+            model->createRabbitRandom();
+            return;
+        }
+    }
+
+    c.pop_back();
+    return;
 }
 
 std::__cxx11::list<Models::Coord>::iterator Snake::coords_begin()
@@ -78,24 +90,17 @@ std::__cxx11::list<Models::Coord>::iterator Snake::coords_end()
 }
 
 
-Coord& Rabit::coords()
+Coord& Rabbit::coords()
 {
     return c;
 }
 
-bool Model::isSnakeOnRabit(Snake& snake, Rabit& rabit)
+bool Snake::isSnakeOnRabbit(Rabbit& rabbit)
 {
-    auto equal_c = std::find(snake.coords_begin(), snake.coords_end(), rabit.coords());
-
-    if (equal_c == snake.coords_end())
-    {
-        if (*equal_c == rabit.coords())
-            return true;
-
-        return false;
-    }
-
-    return true;
+    if (*c.begin() == rabbit.coords())
+        return true;
+    
+    return false;
 }
 
 std::list<Models::Snake>::iterator Model::snakes_begin()
@@ -108,14 +113,14 @@ std::list<Models::Snake>::iterator Model::snakes_end()
     return snakes.end();
 }
 
-std::list<Models::Rabit>::iterator Model::rabits_begin()
+std::list<Models::Rabbit>::iterator Model::rabbits_begin()
 {
-    return rabits.begin();
+    return rabbits.begin();
 }
 
-std::list<Models::Rabit>::iterator Model::rabits_end()
+std::list<Models::Rabbit>::iterator Model::rabbits_end()
 {
-    return rabits.end();
+    return rabbits.end();
 }
 
 void Model::update()
@@ -131,4 +136,46 @@ void Model::setLoopPeriod(useconds_t t)
 useconds_t Model::getLoopPeriod()
 {
     return loop_period;
+}
+
+void Model::setWinSZ(winsize sz_)
+{
+    sz = sz_;
+}
+
+void Model::createRabbitRandom()
+{
+    std::vector<Coord> busy{};
+    
+    for (auto snake = snakes.begin(); snake != snakes.end(); snake++)
+    {
+        for (auto coord = snake->coords_begin(); coord != snake->coords_end(); coord++)
+            busy.push_back(*coord);
+    }
+
+    for (auto rabbit = rabbits.begin(); rabbit != rabbits.end(); rabbit++)
+        busy.push_back(rabbit->coords());
+    
+    bool isbusy = true;
+    Coord new_coord;
+
+    while(isbusy)
+    {
+        isbusy = false;
+        new_coord.first = std::rand() % sz.ws_row;
+        new_coord.second = std::rand() % sz.ws_col;
+
+        for (int i = 0; i < busy.size(); i++)
+        {
+            if (new_coord == busy[i])
+                isbusy = true;
+        }
+    }
+
+    rabbits.push_back(Rabbit(new_coord));
+}
+
+winsize Model::getWinSZ()
+{
+    return sz;
 }

@@ -19,9 +19,12 @@ class TextView : public View
     public:
 
         TextView();
+        ~TextView();
 
         void draw();
         winsize getWinSize();
 };
 
 void winHndlr(int signum);
+
+int getCtrlNum();

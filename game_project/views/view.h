@@ -12,9 +12,8 @@
 #include <signal.h>
 #include <functional>
 
-using HumanFonKeyBindType = std::_Bind<int (Human::*(Human *, std::_Placeholder<1>))(char)>;
-using AIFonKeyBindType = std::_Bind<int (AI::*(std::reference_wrapper<Controller *>, std::decay<std::remove_reference<const std::remove_cv<std::remove_reference<const std::_Placeholder<1> &>::type>::type &>::type &>::type))(int)>;
-
+using HumanFonKeyBindType = std::_Bind<int (Human::*(Human *, std::_Placeholder<1>))(int)>;
+using AIFonKeyBindType = std::_Bind<int (AI::*(AI *, std::_Placeholder<1>))(int)>;
 class View
 {
     static View *obj;

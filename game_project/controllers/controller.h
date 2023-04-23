@@ -5,6 +5,38 @@
 
 #include "../models/model.h"
 
+template<typename T>
+class Matrix
+{
+        size_t m;
+        size_t n;
+        std::vector<T> buf;
+
+    public:
+        Matrix(size_t m_ = 0, size_t n_ = 0) : m(m_), n(n_)
+        {
+            buf = std::vector<T>(m * n, 0);
+        }
+
+        size_t getM() const { return m; }
+        size_t getN() const { return n; }
+
+        T& operator()(size_t x, size_t y)
+        {
+            return buf[x * n + y];
+        }
+
+        void clear()
+        {
+            buf.clear();
+        }
+
+        T& up_to(size_t x, size_t y);
+        T& down_to(size_t x, size_t y);
+        T& left_to(size_t x, size_t y);
+        T& right_to(size_t x, size_t y);
+};
+
 class Controller
 {
     protected:
@@ -18,32 +50,37 @@ class Controller
         static void setModel(Models::Model &);
         void setSnake(Models::Snake* s_);
 
-        virtual int fonKey(char) = 0;
+        virtual int fonKey(int) = 0;
 };
 
-class Human : public Controller
+class Human final : public Controller
 {
     public:
         enum KeySet { wasd, arrows };
 
-    protected:
+    private:
         KeySet keyset = wasd;
     
     public:
-        Human(KeySet) {}
+        Human(KeySet k) : keyset(k) {};
         Human() {}
         ~Human() {}
 
-        int fonKey(char);
+        int fonKey(int);
 };
 
-class AI : public Controller
+class AI final : public Controller
 {
-        int calcNextStep();
-
+    private:
+        static Matrix<int> field;
+        Models::Dir calcNextStep();
+    
     public:
         AI() {}
         ~AI() {}
 
-        int fonKey(char);
+        static void update();
+        static void printField();
+
+        int fonKey(int);
 };

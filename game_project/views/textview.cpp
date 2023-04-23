@@ -1,52 +1,78 @@
 #include "textview.h"
 
 const char CSI[] = "\e[";
+const char* COLORS_str[] = {"RED", "GREEN", "YELLOW", "BLUE", "PURPLE", "OCEAN", "WHITE"};
+const int COLORS_OFFSET = 31;
 
 struct sigaction TextView::sig = {};
 
 TextView::TextView()
 {
     setWinSZSig();
+    printf("%s?25l", CSI);
 }
 
 void TextView::draw()
-{   
-    std::string buffer;
+{
     int isOnPause = 0;
 
     for (int i = 0; i < 10; i++)
         model->createRabbitRandom();
 
-    char ch = 0;
+    int ch = 0;
+
     while(true)
     {
         auto sz = getWinSize();
         model->setWinSZ(sz);
 
-        auto readed = read(STDIN_FILENO, const_cast<char*>(buffer.c_str()), 4095);
-        ch = buffer[0];
+        ch = getCtrlNum();
 
-        for (auto f : HumanfonKeys)
-            isOnPause = f(ch);
+        clean();
+
+        AI::update();
+
+        for (auto fonKey : HumanfonKeys)
+            isOnPause = fonKey(ch);
+
+        for (auto fonKey : AIfonKeys)
+            isOnPause = fonKey(ch);
 
         if (!isOnPause)
         {
-            clean();
-
             hline(0, sz.ws_col);
             hline(sz.ws_row, sz.ws_col);
 
             vline(0, sz.ws_row);
             vline(sz.ws_col, sz.ws_row);
 
-            for (auto snake = model->snakes_begin(); snake != model->snakes_end(); snake++)
+            int snake_n = 0;
+
+            putXY(0, sz.ws_col + 8);
+            printf("SCORE:");
+
+            for (auto snake = model->snakes_begin(), snake_end = model->snakes_end(); snake != snake_end; snake++)
             {
+                if (snake->cutIfBump(model))
+                    snake->status = Models::DEAD;
+                
+                if (snake->status == Models::DEAD)
+                    printf("%s30m", CSI);
+                else
+                    printf("%s%dm", CSI, snake->getColor());
+                putXY(snake_n * 2 + 3, sz.ws_col + 3);
+                printf("%s : %d", COLORS_str[snake->getColor() - COLORS_OFFSET], snake->getLenght() - 1);
+
                 for (auto coord = snake->coords_begin(); coord != snake->coords_end(); coord++)
                 {
                     putXY(coord->first, coord->second);
                     putSymb('@');
                 }
+
+                snake_n++;
             }
+
+            printf("%s39m", CSI);
 
             for (auto rabbit = model->rabbits_begin(); rabbit != model->rabbits_end(); rabbit++)
             {
@@ -66,8 +92,6 @@ void TextView::draw()
         }
         
         usleep(model->getLoopPeriod());
-        
-        buffer.clear();
     }
 }
 
@@ -80,6 +104,8 @@ winsize TextView::getWinSize()
         perror("in TextView::getWinSizw()");
         return winsize{};
     }
+
+    sz.ws_col = sz.ws_col - 20;
 
     return sz;
 }
@@ -149,3 +175,88 @@ void TextView::hline(unsigned int y, unsigned int length)
     line(0, y, LineDir::h, length, '#');
 }
 
+TextView::~TextView()
+{
+    printf("%s?25h", CSI);
+}
+
+/* 
+int ctrl_num: 
+    first bit replying on Pause mode 
+    4-8 bits - up, down, left, right for wasd controller
+    9-12 bits - up, sown, left, right for arrows controller
+*/
+
+// Converts user input to spetial control number witch represents user commands
+int getCtrlNum()
+{
+    std::string buffer;
+    buffer.resize(4095);
+
+    int n_readed = read(STDIN_FILENO, const_cast<char*>(buffer.c_str()), 4095);
+
+    int ctrl_num = 0;
+
+    for (int i = 0; i < n_readed; i++)
+    {
+        if (buffer[i] == '\e')
+        {
+            if (i + 2 < n_readed && buffer[i + 1] == '[')
+            {
+                switch (buffer[i + 2])
+                {
+                    case 'A':
+                        ctrl_num &= 65295;
+                        ctrl_num |= Models::ARROW_UP;
+                        break;
+                    case 'B':
+                        ctrl_num &= 65295;
+                        ctrl_num |= Models::ARROW_DOWN;
+                        break;
+                    case 'C':
+                        ctrl_num &= 65295;
+                        ctrl_num |= Models::ARROW_RIGHT;
+                        break;
+                    case 'D':
+                        ctrl_num &= 65295;
+                        ctrl_num |= Models::ARROW_LEFT;
+                        break;
+                    default:
+                        break;
+                }
+                i += 2;
+            }
+            else
+                ctrl_num |= Models::PAUSE_BIT;
+        }
+        else
+        {
+            switch(buffer[i])
+            {
+                case 'A':
+                case 'a':
+                    ctrl_num &= 61695;
+                    ctrl_num |= Models::WASD_LEFT;
+                    break;
+                case 'S':
+                case 's':
+                    ctrl_num &= 61695;
+                    ctrl_num |= Models::WASD_DOWN;
+                    break;
+                case 'D':
+                case 'd':
+                    ctrl_num &= 61695;
+                    ctrl_num |= Models::WASD_RIGHT;
+                    break;
+                case 'W':
+                case 'w':
+                    ctrl_num &= 61695;
+                    ctrl_num |= Models::WASD_UP;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    return ctrl_num;
+}

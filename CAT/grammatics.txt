@@ -1,0 +1,20 @@
+NUM := ['0'-'9']+ | ['0'-'9']+'.'['0'-'9']+
+TYPE := 'int' | 'char' | 'bool' | 'float'
+IND := ['a'-'z', 'A'-'Z', '_']['a'-'z', 'A'-'Z', '_', '0' - '9']*
+PAR := NUM | IND | FUNC_CALL | '('EXPR')'
+U_EXPR := '!'U_EXPR | '-'U_EXPR | '+'U_EXPR | PAR
+B_EXPR := U_EXPR{['^&|']U_EXPR}*
+M_EXPR := L_EXPR{['*/%']L_EXPR}*
+A_EXPR := M_EXPR{['+-']M_EXPR}*
+EXPR := A_EXPR{[<,>,<=,>=,==,!=]A_EXPR}*
+AS_EXPR := IND '=' EXPR
+ST := EXPR';' | AS_EXPR';' | RET';'
+ST_BLOCK := '{'[ST, VAR_DECL]*'}'
+IF := 'if' '('EXPR')' ST_BLOCK | 'if' '('EXPR')' ST_BLOCK 'else' ST_BLOCK
+WHILE := 'while' '('EXPR')' ST_BLOCK
+VAR_DECL := 'var ' TYPE IND';'
+RET := 'return ' EXPR
+FUNC_CALL := IND'('PAR*')'
+PARAM_LIST := TYPE IND {',' TYPE IND}*
+FUNC_DECL := 'func ' TYPE IND'('PARAM_LIST')' ST_BLOCK | 'func ' TYPE IND'()' ST_BLOCK
+PROGRAM := [FUNC_DECL, VAR_DECL]*
